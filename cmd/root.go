@@ -47,7 +47,7 @@ func init() {
 	Verbose = false
 	rootCmd.PersistentFlags().StringVarP(&Folder, "folder", "f", ".", "Folder containing markdown files")
 	rootCmd.PersistentFlags().StringVarP(&Output, "csv", "c", "output.csv", "CSV file to generate")
-	rootCmd.PersistentFlags().BoolVarP(&IsMkdoc, "ismkdoc", "m", false, "Folder is an Mkdocs source")
+	rootCmd.PersistentFlags().BoolVarP(&IsMkdoc, "ismkdoc", "m", false, "Folder is a Mkdocs source")
 	rootCmd.PersistentFlags().StringVarP(&BaseUrl, "base", "u", "http://localhost:9000", "Base URL for Mkdocs files")
 }
 
