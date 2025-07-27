@@ -15,6 +15,8 @@ import (
 var Verbose bool
 var Folder string
 var Output string
+var IsMkdoc bool
+var BaseUrl string
 
 type FrontMatter struct {
 	Title   string `yaml:"title"`
@@ -45,8 +47,15 @@ func init() {
 	Verbose = false
 	rootCmd.PersistentFlags().StringVarP(&Folder, "folder", "f", ".", "Folder containing markdown files")
 	rootCmd.PersistentFlags().StringVarP(&Output, "csv", "c", "output.csv", "CSV file to generate")
+	rootCmd.PersistentFlags().BoolVarP(&IsMkdoc, "ismkdoc", "m", false, "Folder is an Mkdocs source")
+	rootCmd.PersistentFlags().StringVarP(&BaseUrl, "base", "u", "http://localhost:9000", "Base URL for Mkdocs files")
 }
 
+// computeMarkdownFiles reads markdown files from the specified folder and generates a CSV file with their content.
+// Each markdown file should have a front matter section with a title and a site URL.
+// The text content of the markdown file is also included in the CSV file.
+// The CSV file will have three columns: title, source, and text.
+// If the folder is an Mkdocs source, it will build the URL based on the current file path.
 func computeMarkdownFiles(cmd *cobra.Command, args []string) {
 
 	files, err := ioutil.ReadDir(Folder)
@@ -81,6 +90,11 @@ func computeMarkdownFiles(cmd *cobra.Command, args []string) {
 
 			text := strings.TrimSpace(parts[2])
 			text = strings.ReplaceAll(text, "\n", " ")
+
+			if IsMkdoc {
+				fm.SiteURL = buildMkdocUrl(Folder, filepath.Join(Folder, file.Name()), BaseUrl)
+			}
+
 			records = append(records, []string{fm.Title, fm.SiteURL, text})
 		}
 	}
@@ -106,4 +120,21 @@ func computeMarkdownFiles(cmd *cobra.Command, args []string) {
 	}
 
 	fmt.Println("Fichier CSV créé avec succès.")
+}
+
+// buildMkdocUrl Build html url base on current mkdocs file path
+func buildMkdocUrl(baseFolder string, currentFolder string, baseUrl string) string {
+	// remove folder name from baseFolder, ie /home/user/docs/ to /home/user
+	baseFolder = strings.TrimSuffix(baseFolder, string(os.PathSeparator))
+
+	relPath, err := filepath.Rel(baseFolder, currentFolder)
+	if err != nil {
+		return baseUrl
+	}
+	relPath = strings.TrimSuffix(relPath, filepath.Ext(relPath))
+	relPath = strings.ReplaceAll(relPath, string(os.PathSeparator), "/")
+	if !strings.HasSuffix(baseUrl, "/") {
+		baseUrl += "/"
+	}
+	return baseUrl + relPath + "/"
 }
