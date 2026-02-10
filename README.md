@@ -33,7 +33,7 @@ My second doc title|https://www.mywebsite.com/second-doc|"# My second doc title 
 
 if you are using [Mkdocs](https://www.mkdocs.org/) to generate your documentation, you can use the option `--ismkdoc --baseurl` to generate a csv where urls are computed base on mkdocs pages folder.
 ```shell
-$ md-to-csv -f docs -c output.csv --ismkdoc --baseurl https://www.mywebsite.com/
+$ md-to-csv -f docs -c output.csv --ismkdoc --base https://www.mywebsite.com/ -r
 ```
 
 ## Usage

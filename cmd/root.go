@@ -75,25 +75,18 @@ func computeMarkdownFiles(cmd *cobra.Command, args []string) {
 			return nil
 		})
 		if err != nil {
-			fmt.Printf("Erreur lors de la lecture du répertoire %s : %s", Folder, err)
+			fmt.Printf("Error reading directory %s: %s", Folder, err)
 			return
 		}
-		/*
-			files = make([]os.FileInfo, len(allFiles))
-			for i, f := range allFiles {
-				files[i], _ = os.Stat(f)
-			}*/
 	} else {
-		var files []os.FileInfo
-		files, err = ioutil.ReadDir(Folder)
+		entries, err := os.ReadDir(Folder)
 		if err != nil {
-			fmt.Printf("Erreur lors de la lecture du répertoire %s : %s", Folder, err)
+			fmt.Printf("Error reading directory %s : %s", Folder, err)
 			return
 		}
-		//var allFiles []string
-		for _, file := range files {
-			if !file.IsDir() {
-				allFiles = append(allFiles, filepath.Join(Folder, file.Name()))
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				allFiles = append(allFiles, filepath.Join(Folder, entry.Name()))
 			}
 		}
 	}
@@ -108,30 +101,32 @@ func computeMarkdownFiles(cmd *cobra.Command, args []string) {
 		if filepath.Ext(file) == ".md" {
 			content, err := ioutil.ReadFile(file)
 			if err != nil {
-				fmt.Println("Erreur lors de la lecture du fichier:", err)
+				fmt.Println("Error reading file:", err)
 				continue
 			}
+
+			var fm FrontMatter
 			parts := strings.SplitN(string(content), "---", 3)
 			if len(parts) < 3 {
-				fmt.Println("Fichier markdown mal formé, pas de frontmatter:", file)
+				fmt.Println("Malformed markdown file, no frontmatter:", file)
 				continue
 			}
-			var fm FrontMatter
 			err = yaml.Unmarshal([]byte(parts[1]), &fm)
 			if err != nil {
-				fmt.Println("Erreur lors de l'analyse du front matter:", err)
+				fmt.Println("Error parsing front matter:", err, file)
 				continue
 			}
-			text := strings.TrimSpace(parts[2])
+
+			if fm.Title == "" {
+				// Si le titre est vide, on utilise le premier titre # trouvé dans le markdow
+				fm.Title = extractFirstTitle(string(content))
+				fmt.Printf("title is empty on file %s. Try to get it form markdown titles: %s \n", file, fm.Title)
+			}
+			text := strings.TrimSpace(string(content))
 			text = strings.ReplaceAll(text, "\n", " ")
 			text = strings.ReplaceAll(text, "\"", "'")
 			if IsMkdoc {
 				fm.SiteURL = buildMkdocUrl(Folder, file, BaseUrl)
-			}
-
-			if fm.Title == "" {
-				// Si le titre est vide, on utilise le premier titre # trouvé dans le markdown
-				fm.Title = extractFirstTitle(text)
 			}
 
 			records = append(records, []string{fm.Title, fm.SiteURL, text})
@@ -140,7 +135,7 @@ func computeMarkdownFiles(cmd *cobra.Command, args []string) {
 
 	csvFile, err := os.Create(Output)
 	if err != nil {
-		fmt.Println("Erreur lors de la création du fichier CSV:", err)
+		fmt.Println("Error creating CSV file:", err)
 		return
 	}
 	defer csvFile.Close()
@@ -152,12 +147,12 @@ func computeMarkdownFiles(cmd *cobra.Command, args []string) {
 	for _, record := range records {
 		err := writer.Write(record)
 		if err != nil {
-			fmt.Println("Erreur lors de l'écriture dans le fichier CSV:", err)
+			fmt.Println("Error writing to CSV file:", err)
 			return
 		}
 	}
 
-	fmt.Println("Fichier CSV créé avec succès.")
+	fmt.Println("CSV file created successfully.")
 }
 
 // buildMkdocUrl Build html url base on current mkdocs file path
@@ -183,7 +178,7 @@ func extractFirstTitle(markdown string) string {
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 		if strings.HasPrefix(trimmed, "# ") || strings.HasPrefix(trimmed, "## ") {
-			// Enlève les # et l’espace
+			// Remove the # and space
 			return strings.TrimSpace(trimmed[strings.Index(trimmed, " "):])
 		}
 	}
